@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Дедлайн және тәртіп</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#eef0f7;--card:#fff;--ink:#1b1f3b;--mute:#6b7092;--line:#dcdff0;--acc:#3d4bd6;--ok:#1f9d6b;--bad:#e5484d;--soft:#e6e9fb;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#12142a;--card:#1b1e3a;--ink:#eceefc;--mute:#9a9fc6;--line:#2c3058;--acc:#8c97ff;--ok:#43d29b;--bad:#ff7478;--soft:#262a54}}
+:root[data-theme="dark"]{--bg:#12142a;--card:#1b1e3a;--ink:#eceefc;--mute:#9a9fc6;--line:#2c3058;--acc:#8c97ff;--ok:#43d29b;--bad:#ff7478;--soft:#262a54}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Manrope,system-ui,sans-serif;line-height:1.5}
+main{max-width:960px;margin:0 auto;padding:24px 16px 48px}
+h1{font-size:clamp(28px,6vw,44px);font-weight:800;margin:0 0 4px;letter-spacing:-.02em}
+.sub{color:var(--mute);margin:0 0 24px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media(max-width:760px){.grid{grid-template-columns:1fr}}
+section{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+h2{font-size:20px;margin:0 0 12px}
+form{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+input{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-width:0}
+input[type=text]{flex:1 1 140px}
+button{font:inherit;font-weight:600;cursor:pointer;border:0;border-radius:10px;padding:10px 14px;background:var(--acc);color:#fff}
+button.ghost{background:transparent;color:var(--mute);padding:6px 8px}
+button:focus-visible,input:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+ul{list-style:none;margin:0;padding:0}
+li{display:flex;align-items:center;gap:10px;padding:12px 0;border-top:1px solid var(--line)}
+li .t{flex:1;min-width:0}
+li .n{font-weight:600;overflow-wrap:anywhere}
+li .m{font-size:13px;color:var(--mute)}
+li.done .n{text-decoration:line-through;color:var(--mute)}
+.chk{width:28px;height:28px;border-radius:50%;border:2px solid var(--acc);background:transparent;padding:0;color:#fff;flex:none}
+.chk.on{background:var(--ok);border-color:var(--ok)}
+.late{color:var(--bad)!important;font-weight:600}
+.soon{color:var(--acc)!important;font-weight:600}
+.dots{display:flex;gap:4px;margin-top:4px}
+.dots i{width:14px;height:14px;border-radius:4px;background:var(--soft)}
+.dots i.on{background:var(--ok)}
+.streak{font-weight:800;font-size:18px;white-space:nowrap}
+.empty{color:var(--mute);padding:8px 0}
+</style>
+</head>
+<body>
+<main>
+<h1>Дедлайн және тәртіп</h1>
+<p class="sub" id="today"></p>
+<div class="grid">
+  <section>
+    <h2>Дедлайндар</h2>
+    <form id="df"><input type="text" id="dt" placeholder="Тапсырма атауы" required aria-label="Тапсырма атауы"><input type="date" id="dd" required aria-label="Мерзімі"><button>Қосу</button></form>
+    <ul id="dl"></ul>
+  </section>
+  <section>
+    <h2>Күнделікті әдеттер</h2>
+    <form id="hf"><input type="text" id="ht" placeholder="Мысалы: 20 бет оқу" required aria-label="Әдет атауы"><button>Қосу</button></form>
+    <ul id="hl"></ul>
+  </section>
+</div>
+</main>
+<script>
+var KEY="dl-disc-v1",S={d:[],h:[]};
+try{var r=localStorage.getItem(KEY);if(r){S=JSON.parse(r);S.d=S.d||[];S.h=S.h||[]}}catch(e){}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+function iso(dt){var m=dt.getMonth()+1,d=dt.getDate();return dt.getFullYear()+"-"+(m<10?"0":"")+m+"-"+(d<10?"0":"")+d}
+function shift(n){var x=new Date();x.setDate(x.getDate()+n);return iso(x)}
+var TODAY=iso(new Date());
+function diff(s){var a=new Date(s+"T00:00:00"),b=new Date(TODAY+"T00:00:00");return Math.round((a-b)/864e5)}
+function esc(s){return s.replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+document.getElementById("today").textContent="Бүгін: "+new Date().toLocaleDateString("kk-KZ",{weekday:"long",day:"numeric",month:"long"});
+function streak(h){var n=0,i=h.days.indexOf(TODAY)>-1?0:1;while(h.days.indexOf(shift(-i))>-1){n++;i++}return n}
+function render(){
+  var dl=document.getElementById("dl"),hl=document.getElementById("hl");
+  var d=S.d.slice().sort(function(a,b){return a.done-b.done||a.date.localeCompare(b.date)});
+  dl.innerHTML=d.length?"":'<li class="empty">Алғашқы дедлайнды қосыңыз.</li>';
+  d.forEach(function(x){
+    var k=diff(x.date),t,c="";
+    if(x.done){t="Орындалды"}else if(k<0){t=(-k)+" күн кешікті";c="late"}else if(k==0){t="Бүгін!";c="late"}else if(k==1){t="Ертең";c="soon"}else{t=k+" күн қалды";c=k<=3?"soon":""}
+    var li=document.createElement("li");li.className=x.done?"done":"";
+    li.innerHTML='<button class="chk'+(x.done?" on":"")+'" aria-label="Орындалды деп белгілеу">'+(x.done?"✓":"")+'</button><div class="t"><div class="n">'+esc(x.title)+'</div><div class="m"><span class="'+c+'">'+t+'</span> · '+x.date+'</div></div><button class="ghost" aria-label="Жою">✕</button>';
+    li.children[0].onclick=function(){x.done=!x.done;save();render()};
+    li.children[2].onclick=function(){S.d=S.d.filter(function(y){return y!==x});save();render()};
+    dl.appendChild(li)});
+  hl.innerHTML=S.h.length?"":'<li class="empty">Күнде орындайтын әдетті қосыңыз.</li>';
+  S.h.forEach(function(h){
+    var on=h.days.indexOf(TODAY)>-1,li=document.createElement("li"),dots="";
+    for(var i=6;i>=0;i--)dots+='<i class="'+(h.days.indexOf(shift(-i))>-1?"on":"")+'"></i>';
+    li.innerHTML='<button class="chk'+(on?" on":"")+'" aria-label="Бүгін орындалды">'+(on?"✓":"")+'</button><div class="t"><div class="n">'+esc(h.title)+'</div><div class="dots" title="Соңғы 7 күн">'+dots+'</div></div><span class="streak">🔥 '+streak(h)+'</span><button class="ghost" aria-label="Жою">✕</button>';
+    li.children[0].onclick=function(){var p=h.days.indexOf(TODAY);if(p>-1)h.days.splice(p,1);else h.days.push(TODAY);save();render()};
+    li.children[3].onclick=function(){S.h=S.h.filter(function(y){return y!==h});save();render()};
+    hl.appendChild(li)});
+}
+document.getElementById("dd").value=TODAY;
+document.getElementById("df").onsubmit=function(e){e.preventDefault();
+  var t=document.getElementById("dt"),d=document.getElementById("dd");
+  S.d.push({title:t.value.trim(),date:d.value,done:false});t.value="";save();render()};
+document.getElementById("hf").onsubmit=function(e){e.preventDefault();
+  var t=document.getElementById("ht");S.h.push({title:t.value.trim(),days:[]});t.value="";save();render()};
+render();
+</script>
+</body>
+</html>
